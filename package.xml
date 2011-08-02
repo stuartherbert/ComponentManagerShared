@@ -4,14 +4,14 @@
     http://pear.php.net/dtd/package-2.0
     http://pear.php.net/dtd/package-2.0.xsd">
   <name>ComponentManagerShared</name>
-  <channel>pear.gradwell.com</channel>
+  <channel>pear.phix-project.org</channel>
   <summary>Shared code for the management of different kinds of components</summary>
   <description>
     ComponentManager-Shared holds the shared code used in the management of different kinds of components.
   </description>
   <lead>
     <name>Stuart Herbert</name>
-    <user>stuartherbert</user>
+    <user>stuart</user>
     <email>stuart@stuartherbert.com</email>
     <active>yes</active>
   </lead>
@@ -44,13 +44,13 @@ ${contents}
       </pearinstaller>
       <package>
         <name>Autoloader</name>
-        <channel>pear.gradwell.com</channel>
-        <min>2.0.0</min>
-	      <max>2.999.9999</max>
+        <channel>pear.phix-project.org</channel>
+        <min>3.0.0</min>
+	      <max>3.999.9999</max>
       </package>
       <package>
         <name>phix</name>
-        <channel>pear.gradwell.com</channel>
+        <channel>pear.phix-project.org</channel>
         <min>0.10.0</min>
         <max>1.999.9999</max>
       </package>
