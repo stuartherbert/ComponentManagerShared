@@ -159,6 +159,17 @@ class ComponentFolder
                 }
         }
 
+        public function copyFileFromDataFolderWithNewName($file, $dest)
+        {
+                $srcFile  = $this->pathToDataFolder . '/' . $filename;
+                $destFile = $this->folder . '/' . $dest;
+
+                if (!copy($srcFile, $destFile))
+                {
+                        throw new \Exception('unable to copy ' . $srcFile . ' to ' . $destFile);
+                }
+	}
+
         public function replaceFolderContentsFromDataFolder($src, $dest='')
         {
                 $srcFolder  = $this->pathToDataFolder . '/' . $src;
