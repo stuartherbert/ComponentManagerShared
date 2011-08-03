@@ -54,8 +54,6 @@ use Phix_Project\CommandLineLib\DefinedSwitch;
 
 use Phix_Project\ComponentManager\Entities\ComponentFolder;
 
-if (!class_exists('\Phix_Project\ComponentManager\PhixCommands\ComponentCommandBase'))
-{
 class ComponentCommandBase extends CommandBase
 {
         protected function validateFolder($args, $argsIndex, Context $context)
@@ -98,5 +96,4 @@ class ComponentCommandBase extends CommandBase
 
                 return null;
         }
-}
 }

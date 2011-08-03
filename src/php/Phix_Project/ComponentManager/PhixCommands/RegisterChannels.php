@@ -57,8 +57,6 @@ use Phix_Project\ValidationLib\MustBeValidFile;
 use Phix_Project\ValidationLib\MustBeValidPath;
 use Phix_Project\ValidationLib\MustBeWriteable;
 
-if (!class_exists('Phix_Project\ComponentManager\PhixCommands\RegisterChannels'))
-{
 class RegisterChannels extends CommandBase implements CommandInterface
 {
         public function getCommandName()
@@ -210,5 +208,4 @@ class RegisterChannels extends CommandBase implements CommandInterface
                         system($cmd);
                 }
         }
-}
 }
