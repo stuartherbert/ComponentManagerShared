@@ -235,7 +235,7 @@ class ComponentFolder
 
         private function recursiveCopyFolders($src, $dest)
         {
-                if (@\lstat($dest) && !\is_dir($dest))
+                if (\file_exists($dest) && !\is_dir($dest))
                 {
                         \unlink($dest);
                 }
