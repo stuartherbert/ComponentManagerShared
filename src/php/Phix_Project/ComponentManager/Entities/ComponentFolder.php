@@ -292,15 +292,8 @@ class ComponentFolder
         }
 
         public function editBuildPropertiesVersionNumber($newNumber)
-        {
-                if (!$this->testHasBuildProperties())
-                {
-                        return false;
-                }
-
-                $buildProperties = file_get_contents($this->buildPropertiesFile);
-                $buildProperties = \preg_replace('|^component.version.*=.*$|m', 'component.version=' . $newNumber, $buildProperties);
-                \file_put_contents($this->buildPropertiesFile, $buildProperties);
+	{
+		$this->addOrUpdateBuildProperty('component.version', $newNumber);
 	}
 
 	public function addOrUpdateBuildProperty($property, $value)
@@ -320,5 +313,28 @@ class ComponentFolder
 			$buildProperties .= $property . '=' . $value . PHP_EOL;
 		}
 		\file_put_contents($this->buildPropertiesFile, $buildProperties);
+	}
+
+	public function upgradeComponent()
+	{
+		// just make sure we're not being asked to do something
+		// that is impossible
+		if ($this->componentVersion >= self::LATEST_VERSION)
+		{
+			throw new \Exception('Folder ' . $this->folder . ' is on version ' . $this->componentVersion . ' which is newer than known latest version ' . self::LATEST_VERSION);
+
+		}
+
+		// ok, let's do the upgrades
+		$thisVersion = $this->componentVersion;
+		while ($thisVersion < self::LATEST_VERSION)
+		{
+			$method = 'upgradeFrom' . $thisVersion . 'To' . ($thisVersion + 1);
+			\call_user_method($method, $this);
+			$thisVersion++;
+			$this->editBuildPropertiesVersionNumber($thisVersion);
+		}
+
+		// all done
 	}
 }
