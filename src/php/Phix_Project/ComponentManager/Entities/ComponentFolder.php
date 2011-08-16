@@ -301,5 +301,24 @@ class ComponentFolder
                 $buildProperties = file_get_contents($this->buildPropertiesFile);
                 $buildProperties = \preg_replace('|^component.version.*=.*$|m', 'component.version=' . $newNumber, $buildProperties);
                 \file_put_contents($this->buildPropertiesFile, $buildProperties);
-        }
+	}
+
+	public function addOrUpdateBuildProperty($property, $value)
+	{
+		if (!$this->testHasBuildProperties())
+		{
+			return false;
+		}
+
+		$buildProperties = file_get_contents($this->buildPropertiesFile);
+		if (\preg_match('|^' . $property . '=|'))
+		{
+			$buildProperties = \preg_replace('|^' . $property . '=.*$|m', $property . '=' . $value, $buildProperties);
+		}
+		else
+		{
+			$buildProperties .= $property . '=' . $value . PHP_EOL;
+		}
+		\file_put_contents($this->buildPropertiesFile, $buildProperties);
+	}
 }
