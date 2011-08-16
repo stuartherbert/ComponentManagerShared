@@ -161,7 +161,7 @@ class ComponentFolder
 
         public function copyFileFromDataFolderWithNewName($file, $dest)
         {
-                $srcFile  = $this->pathToDataFolder . '/' . $filename;
+                $srcFile  = $this->pathToDataFolder . '/' . $file;
                 $destFile = $this->folder . '/' . $dest;
 
                 if (!copy($srcFile, $destFile))
