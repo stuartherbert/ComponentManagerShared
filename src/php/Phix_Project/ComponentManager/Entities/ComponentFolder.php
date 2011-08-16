@@ -188,7 +188,7 @@ class ComponentFolder
                 $this->copyFolders($src, $dest);
         }
 
-        private function recursiveRmdir($folder)
+        protected function recursiveRmdir($folder)
         {
                 if (!is_dir($folder))
                 {
