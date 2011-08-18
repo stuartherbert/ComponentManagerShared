@@ -54,6 +54,7 @@ class ComponentFolder
         const STATE_EMPTY = 1;
         const STATE_UPTODATE = 2;
         const STATE_NEEDSUPGRADE = 3;
+        const STATE_INCOMPATIBLE = 4;
 
         /**
          * The folder that contains the component we represent
@@ -109,9 +110,16 @@ class ComponentFolder
                 {
                         if (!isset($properties[$expectedProperty]))
                         {
-                                $this->state = self::STATE_EMPTY;
+                                $this->state = self::STATE_INCOMPATIBLE;
                                 return;
                         }
+                }
+                
+                // is this for a component.type that we support?
+                if ($properties['component.type'] !== static::COMPONENT_TYPE)
+                {
+                        $this->state = self::STATE_INCOMPATIBLE;
+                        return;
                 }
 
                 // okay, we have a build.properties file that we like
@@ -227,7 +235,14 @@ class ComponentFolder
 
         public function copyFolders($src, $dest='')
         {
-                $srcFolder = $this->pathToDataFolder . '/' . $src;
+                if ($src{0} !== DIRECTORY_SEPARATOR)
+                {
+                        $srcFolder = $this->pathToDataFolder . '/' . $src;
+                }
+                else
+                {
+                        $srcFolder = $src;
+                }
                 $destFolder = $this->folder . '/' . $dest;
 
                 $this->recursiveCopyFolders($srcFolder, $destFolder);
