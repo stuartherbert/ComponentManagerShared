@@ -304,13 +304,18 @@ class ComponentFolder
 		}
 
 		$buildProperties = file_get_contents($this->buildPropertiesFile);
-		if (\preg_match('|^' . $property . '=|', $buildProperties))
+		if ($this->hasBuildProperty($property, $buildProperties))
 		{
 			$buildProperties = \preg_replace('|^' . $property . '=.*$|m', $property . '=' . $value, $buildProperties);
         		\file_put_contents($this->buildPropertiesFile, $buildProperties);
 		}
 	}
 
+        public function hasBuildProperty($property, $buildProperties)
+        {
+		return \preg_match('|' . $property . '=|', $buildProperties);                
+        }
+        
 	public function setBuildProperty($property, $value)
 	{
 		if (!$this->testHasBuildProperties())
@@ -319,7 +324,7 @@ class ComponentFolder
 		}
 
 		$buildProperties = file_get_contents($this->buildPropertiesFile);
-		if (\preg_match('|^' . $property . '=|', $buildProperties))
+		if ($this->hasBuildProperty($property, $buildProperties))
 		{
 			$buildProperties = \preg_replace('|^' . $property . '=.*$|m', $property . '=' . $value, $buildProperties);
 		}
