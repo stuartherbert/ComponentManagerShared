@@ -293,10 +293,10 @@ class ComponentFolder
 
         public function editBuildPropertiesVersionNumber($newNumber)
 	{
-		$this->addOrUpdateBuildProperty('component.version', $newNumber);
+		$this->setBuildProperty('component.version', $newNumber);
 	}
 
-	public function addOrUpdateBuildProperty($property, $value)
+	public function addBuildProperty($property, $value)
 	{
 		if (!$this->testHasBuildProperties())
 		{
@@ -304,7 +304,22 @@ class ComponentFolder
 		}
 
 		$buildProperties = file_get_contents($this->buildPropertiesFile);
-		if (\preg_match('|^' . $property . '=|'))
+		if (\preg_match('|^' . $property . '=|', $buildProperties))
+		{
+			$buildProperties = \preg_replace('|^' . $property . '=.*$|m', $property . '=' . $value, $buildProperties);
+        		\file_put_contents($this->buildPropertiesFile, $buildProperties);
+		}
+	}
+
+	public function setBuildProperty($property, $value)
+	{
+		if (!$this->testHasBuildProperties())
+		{
+			return false;
+		}
+
+		$buildProperties = file_get_contents($this->buildPropertiesFile);
+		if (\preg_match('|^' . $property . '=|', $buildProperties))
 		{
 			$buildProperties = \preg_replace('|^' . $property . '=.*$|m', $property . '=' . $value, $buildProperties);
 		}
@@ -314,12 +329,12 @@ class ComponentFolder
 		}
 		\file_put_contents($this->buildPropertiesFile, $buildProperties);
 	}
-
-	public function upgradeComponent()
+        
+	public function upgradeComponent($targetVersion)
 	{
 		// just make sure we're not being asked to do something
 		// that is impossible
-		if ($this->componentVersion >= self::LATEST_VERSION)
+		if ($this->componentVersion >= $targetVersion)
 		{
 			throw new \Exception('Folder ' . $this->folder . ' is on version ' . $this->componentVersion . ' which is newer than known latest version ' . self::LATEST_VERSION);
 
@@ -327,10 +342,10 @@ class ComponentFolder
 
 		// ok, let's do the upgrades
 		$thisVersion = $this->componentVersion;
-		while ($thisVersion < self::LATEST_VERSION)
+		while ($thisVersion < $targetVersion)
 		{
 			$method = 'upgradeFrom' . $thisVersion . 'To' . ($thisVersion + 1);
-			\call_user_method($method, $this);
+			\call_user_func(array($this, $method));
 			$thisVersion++;
 			$this->editBuildPropertiesVersionNumber($thisVersion);
 		}
