@@ -46,6 +46,11 @@
 
 namespace Phix_Project\ComponentManager\Entities;
 
+use Phix_Project\TasksLib\TaskQueue;
+use Phix_Project\TasksLib\Files_RmTask;
+use Phix_Project\TasksLib\Files_MkdirTask;
+use Phix_Project\TasksLib\Files_CpTask;
+
 class ComponentFolder
 {
         const BUILD_PROPERTIES = 'build.properties';
@@ -183,54 +188,26 @@ class ComponentFolder
                 $srcFolder  = $this->pathToDataFolder . '/' . $src;
                 $destFolder = $this->folder . '/' . $dest;
 
-                if (\is_dir($destFolder))
-                {
-                        $this->recursiveRmdir($destFolder);
-                }
-                else if (@\lstat($destFolder))
-                {
-                        \unlink($destFolder);
-                }
-                \mkdir($destFolder);
-
-                $this->copyFolders($src, $dest);
-        }
-
-        protected function recursiveRmdir($folder)
-        {
-                if (!is_dir($folder))
-                {
-                        // we're done
-                        return;
-                }
-
-                $dir = opendir($folder);
-                if (!$dir)
-                {
-                        throw new \Exception("unable to open folder " . $folder . ' for reading');
-                }
-
-                while (false !== ($entry = readdir($dir)))
-                {
-                        if ($entry == '.' || $entry == '..')
-                        {
-                                continue;
-                        }
-
-                        $fqFile = $folder . DIRECTORY_SEPARATOR . $entry;
-                        if (is_dir($fqFile))
-                        {
-                                $this->recursiveRmdir($fqFile);
-                        }
-                        else
-                        {
-                                \unlink($fqFile);
-                        }
-                }
-
-                closedir($dir);
-
-                \rmdir($folder);
+                // queue up the work we need to do
+                $taskQueue = new TaskQueue();
+                
+                $rmTask = new Files_RmTask();
+                $rmTask->initWithFileOrFolder($destFolder);
+                $taskQueue->queueTask($rmTask);
+                
+                $mkdirTask = new Files_MkdirTask();
+                $mkdirTask->initWithFolder($destFolder);
+                $taskQueue->queueTask($mkdirTask);
+                
+                $cpTask = new Files_CpTask();
+                $cpTask->initWithFilesOrFolders($src, $dest);
+                $taskQueue->queueTask($cpTask);
+                
+                // execute the tasks!
+                // 
+                // if there are problems, an exception will automatically
+                // be thrown
+                $taskQueue->executeTasks();
         }
 
         public function copyFolders($src, $dest='')
@@ -245,7 +222,26 @@ class ComponentFolder
                 }
                 $destFolder = $this->folder . '/' . $dest;
 
-                $this->recursiveCopyFolders($srcFolder, $destFolder);
+                // queue up the work we need to do
+                $taskQueue = new TaskQueue();
+                
+                $rmTask = new Files_RmTask();
+                $rmTask->initWithFileOrFolder($destFolder);
+                $taskQueue->queueTask($rmTask);
+                
+                $mkdirTask = new Files_MkdirTask();
+                $mkdirTask->initWithFolder($destFolder);
+                $taskQueue->queueTask($mkdirTask);
+                
+                $cpTask = new Files_CpTask();
+                $cpTask->initWithFilesOrFolders($srcFolder, $destFolder);
+                $taskQueue->queueTask($cpTask);
+                
+                // execute the tasks!
+                //
+                // if there are problems, an exception will automatically
+                // be thrown
+                $taskQueue->executeTasks();
         }
 
         private function recursiveCopyFolders($src, $dest)
