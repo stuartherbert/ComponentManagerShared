@@ -50,6 +50,7 @@ use Phix_Project\TasksLib\TaskQueue;
 use Phix_Project\TasksLib\Files_RmTask;
 use Phix_Project\TasksLib\Files_MkdirTask;
 use Phix_Project\TasksLib\Files_CpTask;
+use Phix_Project\TasksLib\Files_ChmodTask;
 
 class ComponentFolder
 {
@@ -160,27 +161,33 @@ class ComponentFolder
 
         public function copyFilesFromDataFolder($files, $dest='')
         {
+                $taskQueue = new TaskQueue();
+                
                 foreach ($files as $filename)
                 {
                         $srcFile = $this->pathToDataFolder . '/' . $filename;
                         $destFile = $this->folder . '/' . $dest . $filename;
-
-                        if (!copy($srcFile, $destFile))
-                        {
-                                throw new \Exception('unable to copy ' . $srcFile . ' to ' . $destFile);
-                        }
+                        
+                        $cpTask = new Files_CpTask();
+                        $cpTask->initWithFilesOrFolders($srcFile, $destFile);
+                        $taskQueue->queueTask($cpTask);
                 }
+                
+                $taskQueue->executeTasks();
         }
 
         public function copyFileFromDataFolderWithNewName($file, $dest)
         {
                 $srcFile  = $this->pathToDataFolder . '/' . $file;
                 $destFile = $this->folder . '/' . $dest;
-
-                if (!copy($srcFile, $destFile))
-                {
-                        throw new \Exception('unable to copy ' . $srcFile . ' to ' . $destFile);
-                }
+                
+                $taskQueue = new TaskQueue();
+                
+                $cpTask = new Files_CpTask();
+                $cpTask->initWithFilesOrFolders($srcFile, $destFile);
+                $taskQueue->queueTask($cpTask);
+                
+                $taskQueue->executeTasks();
 	}
 
         public function replaceFolderContentsFromDataFolder($src, $dest='')
@@ -244,57 +251,28 @@ class ComponentFolder
                 $taskQueue->executeTasks();
         }
 
-        private function recursiveCopyFolders($src, $dest)
-        {
-                if (\file_exists($dest) && !\is_dir($dest))
-                {
-                        \unlink($dest);
-                }
-                
-                if (!\is_dir($dest))
-                {
-                        \mkdir($dest);
-                }
-
-                $dir = opendir($src);
-                if (!$dir)
-                {
-                        throw new \Exception('unable to open folder ' . $src . ' for reading');
-                }
-                
-                while (false !== ($entry = readdir($dir)))
-                {
-                        if ($entry == '.' || $entry == '..')
-                        {
-                                continue;
-                        }
-
-                        $srcEntry = $src . DIRECTORY_SEPARATOR . $entry;
-                        $dstEntry = $dest . DIRECTORY_SEPARATOR . $entry;
-
-                        if (is_file($srcEntry))
-                        {
-                                \copy($srcEntry, $dstEntry);
-                        }
-                        else if (is_dir($srcEntry))
-                        {
-                                $this->recursiveCopyFolders($srcEntry, $dstEntry);
-                        }
-                }
-                closedir($dir);
-        }
-
         public function enableExecutionOf($file, $dest='')
         {
                 $destFolder = $this->folder . DIRECTORY_SEPARATOR . $dest;
                 $fqFile = $destFolder . $file;
 
-                chmod($fqFile, 0755);
+                // queue up the work we need to do
+                $taskQueue = new TaskQueue();
+                
+                $chmodTask = new Files_ChmodTask();
+                $chmodTask->initWithFileAndMode($fqFile, 0755);
+                $taskQueue->queueTask($chmodTask);
+                
+                // execute the task
+                //
+                // if there are problems, an exception will automatically
+                // be thrown
+                $taskQueue->executeTasks();
         }
 
         public function testHasBuildProperties()
         {
-                if (file_exists($this->buildPropertiesFile))
+                if (\file_exists($this->buildPropertiesFile))
                 {
                         return true;
                 }
