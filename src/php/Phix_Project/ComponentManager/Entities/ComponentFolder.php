@@ -46,6 +46,8 @@
 
 namespace Phix_Project\ComponentManager\Entities;
 
+use SimpleXMLElement;
+
 use Phix_Project\TasksLib\TaskQueue;
 use Phix_Project\TasksLib\Files_RmTask;
 use Phix_Project\TasksLib\Files_MkdirTask;
@@ -55,6 +57,7 @@ use Phix_Project\TasksLib\Files_ChmodTask;
 class ComponentFolder
 {
         const BUILD_PROPERTIES = 'build.properties';
+        const PACKAGE_XML = 'package.xml';
 
         const STATE_UNKNOWN = 0;
         const STATE_EMPTY = 1;
@@ -75,6 +78,12 @@ class ComponentFolder
         public $buildPropertiesFile = null;
         
         /**
+         * The path to the package.xml file in the component's root folder
+         * @var string
+         */
+        public $packageXmlFile = null;
+        
+        /**
          * The current state of the folder
          * @var int 
          */
@@ -92,6 +101,7 @@ class ComponentFolder
         {
                 $this->folder = $folder;
                 $this->buildPropertiesFile = $folder . '/' . self::BUILD_PROPERTIES;
+                $this->packageXmlFile = $folder . '/' . self::PACKAGE_XML;
                 $this->pathToDataFolder = static::DATA_FOLDER;
                 $this->loadFolderState();
         }
@@ -323,6 +333,31 @@ class ComponentFolder
 		}
 		\file_put_contents($this->buildPropertiesFile, $buildProperties);
 	}
+        
+        public function testHasPackageXml()
+        {
+                if (\file_exists($this->packageXmlFile))
+                {
+                        return true;
+                }
+
+                return false;
+        }
+        
+        public function loadPackageXml()
+        {
+                if (!$this->testHasPackageXml())
+                {
+                        return false;
+                }
+                
+                return simplexml_load_file($this->packageXmlFile);
+        }
+        
+        public function savePackageXml(SimpleXMLElement $xmlNode)
+        {
+                \file_put_contents($this->packageXmlFile, $xmlNode->asXML());
+        }
         
 	public function upgradeComponent($targetVersion)
 	{
