@@ -313,7 +313,7 @@ class ComponentFolder
                 }
                 else
                 {
-                        $buildProperties = \preg_replace('|^(' . $after . '=.*$)|m', '\$1' . $property . '=' . $value . PHP_EOL, $buildProperties);
+                        $buildProperties = \preg_replace('|^(' . $after . '=.*$)|m', '$1' . PHP_EOL . $property . '=' . $value, $buildProperties);
                 }
      		\file_put_contents($this->buildPropertiesFile, $buildProperties);
 	}
