@@ -156,6 +156,20 @@ class ExpandPackageXml extends CommandBase implements CommandInterface
                 }
                 $buildProperties['${build.date}'] = date('Y-m-d');
                 $buildProperties['${build.time}'] = date('H:i:s');
+                
+                if (isset($buildProperties['${project.snapshot}']) && $buildProperties['${project.snapshot}'])
+                {
+                        $buildProperties['${project.version}'] = $buildProperties['${project.majorVersion}']
+                          . '.' . $buildProperties['${project.minorVersion}']
+                          . '.' . $buildProperties['${project.patchLevel}']
+                          . 'snapshot' . date('YmdHi');
+                }
+                else
+                {
+                        $buildProperties['${project.version}'] = $buildProperties['${project.majorVersion}']
+                          . '.' . $buildProperties['${project.minorVersion}']
+                          . '.' . $buildProperties['${project.patchLevel}'];                        
+                }
 
                 // generate a list of the files to add
                 $buildProperties['${contents}']   = $this->calculateFilesList($context, $srcFolder, $packageFolder);
