@@ -295,19 +295,27 @@ class ComponentFolder
 		$this->setBuildProperty('component.version', $newNumber);
 	}
 
-	public function addBuildProperty($property, $value)
+	public function addBuildProperty($property, $value, $after=null)
 	{
 		if (!$this->testHasBuildProperties())
 		{
 			return false;
 		}
 
-		$buildProperties = file_get_contents($this->buildPropertiesFile);
+		$buildProperties = file_get_contents($this->buildPropertiesFile);                
 		if ($this->hasBuildProperty($property, $buildProperties))
 		{
 			$buildProperties = \preg_replace('|^' . $property . '=.*$|m', $property . '=' . $value, $buildProperties);
-        		\file_put_contents($this->buildPropertiesFile, $buildProperties);
 		}
+                else if ($after == null)
+                {
+                        $buildProperties .= $property . '=' . $value . PHP_EOL;
+                }
+                else
+                {
+                        $buildProperties = \preg_replace('|^(' . $after . '=.*$)|m', '\$1' . $property . '=' . $value . PHP_EOL, $buildProperties);
+                }
+     		\file_put_contents($this->buildPropertiesFile, $buildProperties);
 	}
 
         public function hasBuildProperty($property, $buildProperties)
