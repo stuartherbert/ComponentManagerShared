@@ -47,7 +47,7 @@
 namespace Phix_Project\ComponentManager\Entities;
 
 use SimpleXMLElement;
-
+use Phix_Project\ComponentManager\E4xx_UpgradeNonsensicalException;
 use Phix_Project\TasksLib\TaskQueue;
 use Phix_Project\TasksLib\Files_RmTask;
 use Phix_Project\TasksLib\Files_MkdirTask;
@@ -117,7 +117,7 @@ class ComponentFolder
 
                 // we have a build.properties file
                 // let's have a peak inside
-                $properties = \parse_ini_file($this->buildPropertiesFile);
+                $properties = parse_ini_file($this->buildPropertiesFile);
 
                 // if it does not have the contents we expect
                 // we will discard it
@@ -282,7 +282,7 @@ class ComponentFolder
 
         public function testHasBuildProperties()
         {
-                if (\file_exists($this->buildPropertiesFile))
+                if (file_exists($this->buildPropertiesFile))
                 {
                         return true;
                 }
@@ -305,7 +305,7 @@ class ComponentFolder
 		$buildProperties = file_get_contents($this->buildPropertiesFile);                
 		if ($this->hasBuildProperty($property, $buildProperties))
 		{
-			$buildProperties = \preg_replace('|^' . $property . '=.*$|m', $property . '=' . $value, $buildProperties);
+			$buildProperties = preg_replace('|^' . $property . '=.*$|m', $property . '=' . $value, $buildProperties);
 		}
                 else if ($after == null)
                 {
@@ -313,14 +313,14 @@ class ComponentFolder
                 }
                 else
                 {
-                        $buildProperties = \preg_replace('|^(' . $after . '=.*$)|m', '$1' . PHP_EOL . $property . '=' . $value, $buildProperties);
+                        $buildProperties = preg_replace('|^(' . $after . '=.*$)|m', '$1' . PHP_EOL . $property . '=' . $value, $buildProperties);
                 }
-     		\file_put_contents($this->buildPropertiesFile, $buildProperties);
+     		file_put_contents($this->buildPropertiesFile, $buildProperties);
 	}
 
         public function hasBuildProperty($property, $buildProperties)
         {
-		return \preg_match('|' . $property . '=|', $buildProperties);                
+		return preg_match('|' . $property . '=|', $buildProperties);                
         }
         
 	public function setBuildProperty($property, $value)
@@ -333,18 +333,18 @@ class ComponentFolder
 		$buildProperties = file_get_contents($this->buildPropertiesFile);
 		if ($this->hasBuildProperty($property, $buildProperties))
 		{
-			$buildProperties = \preg_replace('|^' . $property . '=.*$|m', $property . '=' . $value, $buildProperties);
+			$buildProperties = preg_replace('|^' . $property . '=.*$|m', $property . '=' . $value, $buildProperties);
 		}
 		else
 		{
 			$buildProperties .= $property . '=' . $value . PHP_EOL;
 		}
-		\file_put_contents($this->buildPropertiesFile, $buildProperties);
+		file_put_contents($this->buildPropertiesFile, $buildProperties);
 	}
         
         public function testHasPackageXml()
         {
-                if (\file_exists($this->packageXmlFile))
+                if (file_exists($this->packageXmlFile))
                 {
                         return true;
                 }
@@ -364,25 +364,42 @@ class ComponentFolder
         
         public function savePackageXml(SimpleXMLElement $xmlNode)
         {
-                \file_put_contents($this->packageXmlFile, $xmlNode->asXML());
+                file_put_contents($this->packageXmlFile, $xmlNode->asXML());
         }
         
-	public function upgradeComponent($targetVersion)
+	public function upgradeComponent($targetVersion, $thisVersion = null)
 	{
-		// just make sure we're not being asked to do something
-		// that is impossible
-		if ($this->componentVersion >= $targetVersion)
-		{
-			throw new \Exception('Folder ' . $this->folder . ' is on version ' . $this->componentVersion . ' which is newer than known latest version ' . self::LATEST_VERSION);
+                // work out which version we are upgrading from
+                //
+                // did the caller override the version to upgrade from?
+                if ($thisVersion == null)
+                {
+                        // no, they did not
+                        // use the version from the properties file
+                        $thisVersion = $this->componentVersion;
 
-		}
+                        // make sure we're not being asked to do something
+                        // that is impossible
+                        if ($this->componentVersion >= $targetVersion)
+                        {
+                                throw new E4xx_UpgradeNonsensicalException('Folder ' . $this->folder . ' is on version ' . $this->componentVersion . ' which is newer than known latest version ' . static::LATEST_VERSION);
+                        }
+                }
+                else
+                {
+                        // make sure we're not being asked to do something
+                        // that is impossible
+                        if ($thisVersion >= $targetVersion)
+                        {
+                                throw new E4xx_UpgradeNonsensicalException('Cannot upgrade from ' . $thisVersion . ' to ' . $targetVersion . '; that is just nonsense!');
+                        }
+                }
 
 		// ok, let's do the upgrades
-		$thisVersion = $this->componentVersion;
 		while ($thisVersion < $targetVersion)
 		{
 			$method = 'upgradeFrom' . $thisVersion . 'To' . ($thisVersion + 1);
-			\call_user_func(array($this, $method));
+			call_user_func(array($this, $method));
 			$thisVersion++;
 			$this->editBuildPropertiesVersionNumber($thisVersion);
 		}
