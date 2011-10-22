@@ -56,7 +56,7 @@ use Phix_Project\ComponentManager\Entities\ComponentFolder;
 
 class ComponentCommandBase extends CommandBase
 {
-        protected function validateFolder($args, $argsIndex, Context $context)
+        protected function validateFolder(&$args, $argsIndex, Context $context)
         {
                 $se = $context->stderr;
 
@@ -65,10 +65,9 @@ class ComponentCommandBase extends CommandBase
 
                 if (!isset($args[$argsIndex]))
                 {
-                        $se->output($context->errorStyle, $context->errorPrefix);
-                        $se->outputLine(null, 'missing argument <folder>');
-
-                        return 1;
+                        // new - if the folder is missing, assume that the
+                        // user wants us to use the current working directory
+                        $args[$argsIndex] = getcwd();
                 }
 
                 // is the folder a real directory?
