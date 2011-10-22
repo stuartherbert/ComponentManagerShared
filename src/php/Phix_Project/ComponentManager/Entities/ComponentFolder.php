@@ -53,6 +53,7 @@ use Phix_Project\TasksLib\Files_RmTask;
 use Phix_Project\TasksLib\Files_MkdirTask;
 use Phix_Project\TasksLib\Files_CpTask;
 use Phix_Project\TasksLib\Files_ChmodTask;
+use Phix_Project\TasksLib\Files_RegexTask;
 
 class ComponentFolder
 {
@@ -274,6 +275,24 @@ class ComponentFolder
                 $taskQueue->queueTask($chmodTask);
                 
                 // execute the task
+                //
+                // if there are problems, an exception will automatically
+                // be thrown
+                $taskQueue->executeTasks();
+        }
+        
+        public function regexFile($file, $regex, $replace)
+        {
+                $srcFile = $this->folder . '/' . $file;
+                
+                // queue up the work we need to do
+                $taskQueue = new TaskQueue();
+                
+                $regexTask = new Files_RegexTask();
+                $regexTask->initWithFileAndRegex($srcFile, $regex, $replace);
+                $taskQueue->queueTask($regexTask);
+                
+                // execute the tasks!
                 //
                 // if there are problems, an exception will automatically
                 // be thrown
