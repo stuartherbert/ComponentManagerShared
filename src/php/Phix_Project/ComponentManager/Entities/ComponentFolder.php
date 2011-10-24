@@ -48,6 +48,7 @@ namespace Phix_Project\ComponentManager\Entities;
 
 use SimpleXMLElement;
 use Phix_Project\ComponentManager\E4xx_UpgradeNonsensicalException;
+use Phix_Project\ContractLib\Contract;
 use Phix_Project\TasksLib\TaskQueue;
 use Phix_Project\TasksLib\Files_RmTask;
 use Phix_Project\TasksLib\Files_MkdirTask;
@@ -172,6 +173,16 @@ class ComponentFolder
 
         public function copyFilesFromDataFolder($files, $dest='')
         {
+                // make sure we catch silly programmer errors
+                Contract::Preconditions(function() use($files, $dest) 
+                {
+                        Contract::Requires(is_array($files));
+                        if (strlen($dest) > 0)
+                        {
+                                Contract::Requires(substr($dest,-1, 1) == '/');
+                        }
+                });
+                
                 $taskQueue = new TaskQueue();
                 
                 foreach ($files as $filename)
