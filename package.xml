@@ -46,6 +46,12 @@ ${contents}
 	      <max>3.999.9999</max>
       </package>
       <package>
+        <name>ContractLib</name>
+        <channel>pear.phix-project.org</channel>
+        <min>1.0.0</min>
+        <max>1.999.9999</max>
+      </package>
+      <package>
         <name>TasksLib</name>
         <channel>pear.phix-project.org</channel>
         <min>1.1.0</min>
