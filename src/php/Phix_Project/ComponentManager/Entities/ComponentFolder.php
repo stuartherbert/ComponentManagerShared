@@ -176,10 +176,15 @@ class ComponentFolder
                 // make sure we catch silly programmer errors
                 Contract::Preconditions(function() use($files, $dest) 
                 {
-                        Contract::Requires(is_array($files));
+                        // make sure we're happy with $files
+                        Contract::RequiresValue($files, is_array($files), '$files must be an array');
+                        Contract::RequiresValue($files, count($files) > 0, '$files must not be an empty array');
+                        
+                        // make sure we're happy with $dest
+                        Contract::RequiresValue($dest, is_string($dest), '$dest must be a string');
                         if (strlen($dest) > 0)
                         {
-                                Contract::Requires(substr($dest,-1, 1) == '/');
+                                Contract::RequiresValue($dest, substr($dest,-1, 1) == '/', '$dest must end with a / character');
                         }
                 });
                 
@@ -200,6 +205,16 @@ class ComponentFolder
 
         public function copyFileFromDataFolderWithNewName($file, $dest)
         {
+                // make sure we catch silly programmer errors
+                Contract::Preconditions(function() use ($file, $dest)
+                {
+                        Contract::RequiresValue($file, is_string($file), '$file must be a string');
+                        Contract::RequiresValue($file, strlen($file) > 0, '$file cannot be an empty string');
+                        
+                        Contract::RequiresValue($dest, is_string($dest), '$dest must be a string');
+                        Contract::RequiresValue($dest, strlen($dest) > 0, '$dest cannot be an empty string');
+                });
+                
                 $srcFile  = $this->pathToDataFolder . '/' . $file;
                 $destFile = $this->folder . '/' . $dest;
                 
@@ -214,6 +229,15 @@ class ComponentFolder
 
         public function replaceFolderContentsFromDataFolder($src, $dest='')
         {
+                // make sure we catch silly programmer errors
+                Contract::Preconditions(function() use ($src, $dest)
+                {
+                        Contract::RequiresValue($src, is_string($src), '$src must be a string');
+                        Contract::RequiresValue($src, strlen($src) > 0, '$src cannot be an empty string');
+                        
+                        Contract::RequiresValue($dest, is_string($dest), '$dest must be a string');
+                });
+                
                 $srcFolder  = $this->pathToDataFolder . '/' . $src;
                 $destFolder = $this->folder . '/' . $dest;
 
@@ -241,6 +265,15 @@ class ComponentFolder
 
         public function copyFolders($src, $dest='')
         {
+                // catch silly programmer errors
+                Contract::Preconditions(function() use ($src, $dest)
+                {
+                        Contract::RequiresValue($src, is_string($src), '$src must be a string');
+                        Contract::RequiresValue($src, strlen($src) > 0, '$src cannot be an empty string');
+                        
+                        Contract::RequiresValue($dest, is_string($dest), '$dest must be a string');
+                });
+                
                 if ($src{0} !== DIRECTORY_SEPARATOR)
                 {
                         $srcFolder = $this->pathToDataFolder . '/' . $src;
@@ -273,10 +306,23 @@ class ComponentFolder
                 $taskQueue->executeTasks();
         }
 
-        public function enableExecutionOf($file, $dest='')
+        public function enableExecutionOf($file)
         {
-                $destFolder = $this->folder . DIRECTORY_SEPARATOR . $dest;
-                $fqFile = $destFolder . $file;
+                // catch silly programmer errors
+                Contract::Preconditions(function() use ($file, $dest)
+                {
+                        Contract::RequiresValue($file, is_string($file), '$file must be a string');
+                        Contract::RequiresValue($file, strlen($file) > 0, '$file cannot be an empty string');
+                });
+                
+                if ($file{0} !== DIRECTORY_SEPARATOR)
+                {
+                        $fqFile = $this->folder . '/' . $file;
+                }
+                else
+                {
+                        $fqFile = $file;
+                }
 
                 // queue up the work we need to do
                 $taskQueue = new TaskQueue();
@@ -294,6 +340,33 @@ class ComponentFolder
         
         public function regexFile($file, $regex, $replace)
         {
+                // catch any silly programmer errors
+                Contract::Preconditions(function() use ($file, $regex, $replace)
+                {
+                        Contract::RequiresValue($file, is_string($file), '$file must be a string');
+                        Contract::RequiresValue($file, strlen($file) > 0, '$file cannot be an empty string');
+                        
+                        if (is_array($regex))
+                        {
+                                Contract::ForAll($regex, function($value){ Contract::RequiresValue($value, is_string($value), '$regex array can only contain strings'); });
+                        }
+                        else
+                        {
+                                Contract::RequiresValue($regex, is_string($regex), '$regex must be a string or an array');
+                                Contract::RequiresValue($regex, strlen($regex) > 0, '$regex cannot be an empty string');
+                        }
+                        
+                        if (is_array($replace))
+                        {
+                                Contract::ForAll($replace, function($value){ Contract::RequiresValue($value, is_string($value), '$replace array can only contain strings'); });
+                        }
+                        else
+                        {
+                                Contract::RequiresValue($replace, is_string($replace), '$replace must be a string or an array');
+                                Contract::RequiresValue($replace, strlen($replace) > 0, '$replace cannot be an empty string');
+                        }
+                });
+                
                 $srcFile = $this->folder . '/' . $file;
                 
                 // queue up the work we need to do
@@ -327,6 +400,15 @@ class ComponentFolder
 
 	public function addBuildProperty($property, $value, $after=null)
 	{
+                // catch silly programmer errors
+                Contract::Preconditions(function() use ($property, $value, $after)
+                {
+                        Contract::RequiresValue($property, is_string($property), '$property must be a string');
+                        Contract::RequiresValue($property, strlen($property) > 0, '$property cannot be an empty string');
+                        
+                        Contract::RequiresValue($value, is_string($value) || is_int($value) || is_float($value), '$value must be a string, integer or float');
+                });
+                
 		if (!$this->testHasBuildProperties())
 		{
 			return false;
@@ -350,11 +432,30 @@ class ComponentFolder
 
         public function hasBuildProperty($property, $buildProperties)
         {
+                // catch silly programmer errors
+                Contract::Preconditions(function() use ($property, $buildProperties)
+                {
+                        Contract::RequiresValue($property, is_string($property), '$property must be a string');
+                        Contract::RequiresValue($property, strlen($property) > 0, '$property cannot be an empty string');
+                        
+                        Contract::RequiresValue($buildProperties, is_string($buildProperties), '$buildProperties must be a string');
+                        Contract::RequiresValue($buildProperties, strlen($buildProperties) > 0, '$buildProperties cannot be an empty string');
+                });
+                
 		return preg_match('|' . $property . '=|', $buildProperties);                
         }
         
 	public function setBuildProperty($property, $value)
 	{
+                // catch silly programmer errors
+                Contract::Preconditions(function() use ($property, $value)
+                {
+                        Contract::RequiresValue($property, is_string($property), '$property must be a string');
+                        Contract::RequiresValue($property, strlen($property) > 0, '$property cannot be an empty string');
+                        
+                        Contract::RequiresValue($value, is_string($value) || is_int($value) || is_float($value), '$value must be a string, integer or float');
+                });
+                
 		if (!$this->testHasBuildProperties())
 		{
 			return false;
