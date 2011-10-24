@@ -193,7 +193,7 @@ class ComponentFolder
                 foreach ($files as $filename)
                 {
                         $srcFile = $this->pathToDataFolder . '/' . $filename;
-                        $destFile = $this->folder . '/' . $dest . $filename;
+                        $destFile = $this->folder . '/' . $dest . basename($filename);
                         
                         $cpTask = new Files_CpTask();
                         $cpTask->initWithFilesOrFolders($srcFile, $destFile);
