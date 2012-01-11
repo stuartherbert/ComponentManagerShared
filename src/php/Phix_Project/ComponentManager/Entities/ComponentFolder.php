@@ -439,6 +439,35 @@ class ComponentFolder
                 $taskQueue->executeTasks();
         }
 
+        public function removeFolders($folders)
+        {
+                // catch silly programmer errors
+                Contract::Preconditions(function() use ($folders)
+                {
+                        Contract::RequiresValue($folders, is_array($folders), '$folders must be an array');
+                        Contract::RequiresValue($folders, count($folders) > 0, '$folders cannot be an empty array');
+                });
+
+                $foldersToRemove = array();
+                foreach ($folders as $folder)
+                {
+                        $foldersToRemove[] = $this->folder . '/' . $folder;
+                }
+
+                // queue up the work we need to do
+                $taskQueue = new TaskQueue();
+
+                $rmTask = new Files_RmTask();
+                $rmTask->initWithFolders($foldersToRemove);
+                $taskQueue->queueTask($rmTask);
+
+                // execute the tasks!
+                //
+                // if there are problems, an exception will automatically
+                // be thrown
+                $taskQueue->executeTasks();
+        }
+
         public function testHasBuildProperties()
         {
                 if (file_exists($this->buildPropertiesFile))
