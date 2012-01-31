@@ -48,7 +48,10 @@ namespace Phix_Project\ComponentManager\Entities;
 
 use SimpleXMLElement;
 use Phix_Project\ComponentManager\E4xx_UpgradeNonsensicalException;
+use Phix_Project\ContractLib\Contract;
+use Phix_Project\TasksLib\E5xx_TaskFailedException;
 use Phix_Project\TasksLib\TaskQueue;
+use Phix_Project\TasksLib\Files_RenameIfNotModifiedTask;
 use Phix_Project\TasksLib\Files_RmTask;
 use Phix_Project\TasksLib\Files_MkdirTask;
 use Phix_Project\TasksLib\Files_CpTask;
@@ -77,16 +80,16 @@ class ComponentFolder
          * @var string
          */
         public $buildPropertiesFile = null;
-        
+
         /**
          * The path to the package.xml file in the component's root folder
          * @var string
          */
         public $packageXmlFile = null;
-        
+
         /**
          * The current state of the folder
-         * @var int 
+         * @var int
          */
         public $state = self::STATE_UNKNOWN;
 
@@ -131,7 +134,7 @@ class ComponentFolder
                                 return;
                         }
                 }
-                
+
                 // is this for a component.type that we support?
                 if ($properties['component.type'] !== static::COMPONENT_TYPE)
                 {
@@ -172,64 +175,161 @@ class ComponentFolder
 
         public function copyFilesFromDataFolder($files, $dest='')
         {
+                // make sure we catch silly programmer errors
+                Contract::Preconditions(function() use($files, $dest)
+                {
+                        // make sure we're happy with $files
+                        Contract::RequiresValue($files, is_array($files), '$files must be an array');
+                        Contract::RequiresValue($files, count($files) > 0, '$files must not be an empty array');
+
+                        // make sure we're happy with $dest
+                        Contract::RequiresValue($dest, is_string($dest), '$dest must be a string');
+                        if (strlen($dest) > 0)
+                        {
+                                Contract::RequiresValue($dest, substr($dest,-1, 1) == '/', '$dest must end with a / character');
+                        }
+                });
+
                 $taskQueue = new TaskQueue();
-                
+
                 foreach ($files as $filename)
                 {
                         $srcFile = $this->pathToDataFolder . '/' . $filename;
-                        $destFile = $this->folder . '/' . $dest . $filename;
-                        
+                        $destFile = $this->folder . '/' . $dest . basename($filename);
+
                         $cpTask = new Files_CpTask();
                         $cpTask->initWithFilesOrFolders($srcFile, $destFile);
                         $taskQueue->queueTask($cpTask);
                 }
-                
+
                 $taskQueue->executeTasks();
         }
 
         public function copyFileFromDataFolderWithNewName($file, $dest)
         {
+                // make sure we catch silly programmer errors
+                Contract::Preconditions(function() use ($file, $dest)
+                {
+                        Contract::RequiresValue($file, is_string($file), '$file must be a string');
+                        Contract::RequiresValue($file, strlen($file) > 0, '$file cannot be an empty string');
+
+                        Contract::RequiresValue($dest, is_string($dest), '$dest must be a string');
+                        Contract::RequiresValue($dest, strlen($dest) > 0, '$dest cannot be an empty string');
+                });
+
                 $srcFile  = $this->pathToDataFolder . '/' . $file;
                 $destFile = $this->folder . '/' . $dest;
-                
+
                 $taskQueue = new TaskQueue();
-                
+
                 $cpTask = new Files_CpTask();
                 $cpTask->initWithFilesOrFolders($srcFile, $destFile);
                 $taskQueue->queueTask($cpTask);
-                
+
                 $taskQueue->executeTasks();
 	}
 
         public function replaceFolderContentsFromDataFolder($src, $dest='')
         {
+                // make sure we catch silly programmer errors
+                Contract::Preconditions(function() use ($src, $dest)
+                {
+                        Contract::RequiresValue($src, is_string($src), '$src must be a string');
+                        Contract::RequiresValue($src, strlen($src) > 0, '$src cannot be an empty string');
+
+                        Contract::RequiresValue($dest, is_string($dest), '$dest must be a string');
+                });
+
                 $srcFolder  = $this->pathToDataFolder . '/' . $src;
                 $destFolder = $this->folder . '/' . $dest;
 
                 // queue up the work we need to do
                 $taskQueue = new TaskQueue();
-                
+
                 $rmTask = new Files_RmTask();
                 $rmTask->initWithFileOrFolder($destFolder);
                 $taskQueue->queueTask($rmTask);
-                
+
                 $mkdirTask = new Files_MkdirTask();
                 $mkdirTask->initWithFolder($destFolder);
                 $taskQueue->queueTask($mkdirTask);
-                
+
                 $cpTask = new Files_CpTask();
                 $cpTask->initWithFilesOrFolders($src, $dest);
                 $taskQueue->queueTask($cpTask);
-                
+
                 // execute the tasks!
-                // 
+                //
                 // if there are problems, an exception will automatically
                 // be thrown
                 $taskQueue->executeTasks();
         }
 
+        public function renameOrReplaceFileFromDataFolder($src, $oldName, $oldChecksum)
+        {
+                // make sure we catch silly programmer errors
+                Contract::Preconditions(function() use ($src, $oldName, $oldChecksum)
+                {
+                        Contract::RequiresValue($src,         is_string($src),         '$src must be a string');
+                        Contract::RequiresValue($src,         strlen($src) > 0,        '$src cannot be an empty string');
+                        Contract::RequiresValue($oldName,     is_string($oldName),     '$oldName must be a string');
+                        Contract::RequiresValue($oldName,     strlen($oldName) > 0,    '$oldName cannot be an empty string');
+                        Contract::RequiresValue($oldChecksum, is_string($oldChecksum), '$oldChecksum must be a string');
+                        Contract::RequiresValue($oldChecksum, strlen($oldChecksum) == 32, '$oldChecksum must be an md5sum');
+                });
+
+                $newFile        = $this->pathToDataFolder . '/' . $src;
+                $fileToMoveFrom = $this->folder . '/' . $oldName;
+                $fileToMoveTo   = $this->folder . '/' . $src;
+
+                if (file_exists($fileToMoveFrom))
+                {
+                        // queue up the work we need to do
+                        $taskQueue = new TaskQueue();
+
+                        $renameTask = new Files_RenameIfNotModifiedTask();
+                        $renameTask->initWithFileAndChecksum($fileToMoveFrom, $fileToMoveTo, $oldChecksum);
+                        $taskQueue->queueTask($renameTask);
+
+                        $renameFailed = false;
+                        try
+                        {
+                                $taskQueue->executeTasks();
+                        }
+                        catch(E5xx_TaskFailedException $e)
+                        {
+                                $renameFailed = true;
+                        }
+
+                        // did it work?
+                        if (!$renameFailed)
+                        {
+                                // yes
+                                return true;
+                        }
+                }
+
+                // if we get here, the old file has been modified, and
+                // cannot be moved ... or the old file is missing
+                //
+                // we need to copy the new version of the file into the
+                // right place
+
+                $this->copyFilesFromDataFolder(array($src));
+                return false;
+        }
+
         public function copyFolders($src, $dest='')
         {
+                // catch silly programmer errors
+                Contract::Preconditions(function() use ($src, $dest)
+                {
+                        Contract::RequiresValue($src, is_string($src), '$src must be a string');
+                        Contract::RequiresValue($src, strlen($src) > 0, '$src cannot be an empty string');
+
+                        Contract::RequiresValue($dest, is_string($dest), '$dest must be a string');
+                });
+
                 if ($src{0} !== DIRECTORY_SEPARATOR)
                 {
                         $srcFolder = $this->pathToDataFolder . '/' . $src;
@@ -242,19 +342,19 @@ class ComponentFolder
 
                 // queue up the work we need to do
                 $taskQueue = new TaskQueue();
-                
+
                 $rmTask = new Files_RmTask();
                 $rmTask->initWithFileOrFolder($destFolder);
                 $taskQueue->queueTask($rmTask);
-                
+
                 $mkdirTask = new Files_MkdirTask();
                 $mkdirTask->initWithFolder($destFolder);
                 $taskQueue->queueTask($mkdirTask);
-                
+
                 $cpTask = new Files_CpTask();
                 $cpTask->initWithFilesOrFolders($srcFolder, $destFolder);
                 $taskQueue->queueTask($cpTask);
-                
+
                 // execute the tasks!
                 //
                 // if there are problems, an exception will automatically
@@ -262,36 +362,105 @@ class ComponentFolder
                 $taskQueue->executeTasks();
         }
 
-        public function enableExecutionOf($file, $dest='')
+        public function enableExecutionOf($file)
         {
-                $destFolder = $this->folder . DIRECTORY_SEPARATOR . $dest;
-                $fqFile = $destFolder . $file;
+                // catch silly programmer errors
+                Contract::Preconditions(function() use ($file, $dest)
+                {
+                        Contract::RequiresValue($file, is_string($file), '$file must be a string');
+                        Contract::RequiresValue($file, strlen($file) > 0, '$file cannot be an empty string');
+                });
+
+                if ($file{0} !== DIRECTORY_SEPARATOR)
+                {
+                        $fqFile = $this->folder . '/' . $file;
+                }
+                else
+                {
+                        $fqFile = $file;
+                }
 
                 // queue up the work we need to do
                 $taskQueue = new TaskQueue();
-                
+
                 $chmodTask = new Files_ChmodTask();
                 $chmodTask->initWithFileAndMode($fqFile, 0755);
                 $taskQueue->queueTask($chmodTask);
-                
+
                 // execute the task
                 //
                 // if there are problems, an exception will automatically
                 // be thrown
                 $taskQueue->executeTasks();
         }
-        
+
         public function regexFile($file, $regex, $replace)
         {
+                // catch any silly programmer errors
+                Contract::Preconditions(function() use ($file, $regex, $replace)
+                {
+                        Contract::RequiresValue($file, is_string($file), '$file must be a string');
+                        Contract::RequiresValue($file, strlen($file) > 0, '$file cannot be an empty string');
+
+                        if (is_array($regex))
+                        {
+                                Contract::ForAll($regex, function($value){ Contract::RequiresValue($value, is_string($value), '$regex array can only contain strings'); });
+                        }
+                        else
+                        {
+                                Contract::RequiresValue($regex, is_string($regex), '$regex must be a string or an array');
+                                Contract::RequiresValue($regex, strlen($regex) > 0, '$regex cannot be an empty string');
+                        }
+
+                        if (is_array($replace))
+                        {
+                                Contract::ForAll($replace, function($value){ Contract::RequiresValue($value, is_string($value), '$replace array can only contain strings'); });
+                        }
+                        else
+                        {
+                                Contract::RequiresValue($replace, is_string($replace), '$replace must be a string or an array');
+                                Contract::RequiresValue($replace, strlen($replace) > 0, '$replace cannot be an empty string');
+                        }
+                });
+
                 $srcFile = $this->folder . '/' . $file;
-                
+
                 // queue up the work we need to do
                 $taskQueue = new TaskQueue();
-                
+
                 $regexTask = new Files_RegexTask();
                 $regexTask->initWithFileAndRegex($srcFile, $regex, $replace);
                 $taskQueue->queueTask($regexTask);
-                
+
+                // execute the tasks!
+                //
+                // if there are problems, an exception will automatically
+                // be thrown
+                $taskQueue->executeTasks();
+        }
+
+        public function removeFolders($folders)
+        {
+                // catch silly programmer errors
+                Contract::Preconditions(function() use ($folders)
+                {
+                        Contract::RequiresValue($folders, is_array($folders), '$folders must be an array');
+                        Contract::RequiresValue($folders, count($folders) > 0, '$folders cannot be an empty array');
+                });
+
+                $foldersToRemove = array();
+                foreach ($folders as $folder)
+                {
+                        $foldersToRemove[] = $this->folder . '/' . $folder;
+                }
+
+                // queue up the work we need to do
+                $taskQueue = new TaskQueue();
+
+                $rmTask = new Files_RmTask();
+                $rmTask->initWithFolders($foldersToRemove);
+                $taskQueue->queueTask($rmTask);
+
                 // execute the tasks!
                 //
                 // if there are problems, an exception will automatically
@@ -316,12 +485,21 @@ class ComponentFolder
 
 	public function addBuildProperty($property, $value, $after=null)
 	{
+                // catch silly programmer errors
+                Contract::Preconditions(function() use ($property, $value, $after)
+                {
+                        Contract::RequiresValue($property, is_string($property), '$property must be a string');
+                        Contract::RequiresValue($property, strlen($property) > 0, '$property cannot be an empty string');
+
+                        Contract::RequiresValue($value, is_string($value) || is_int($value) || is_float($value), '$value must be a string, integer or float');
+                });
+
 		if (!$this->testHasBuildProperties())
 		{
 			return false;
 		}
 
-		$buildProperties = file_get_contents($this->buildPropertiesFile);                
+		$buildProperties = file_get_contents($this->buildPropertiesFile);
 		if ($this->hasBuildProperty($property, $buildProperties))
 		{
 			$buildProperties = preg_replace('|^' . $property . '=.*$|m', $property . '=' . $value, $buildProperties);
@@ -339,11 +517,30 @@ class ComponentFolder
 
         public function hasBuildProperty($property, $buildProperties)
         {
-		return preg_match('|' . $property . '=|', $buildProperties);                
+                // catch silly programmer errors
+                Contract::Preconditions(function() use ($property, $buildProperties)
+                {
+                        Contract::RequiresValue($property, is_string($property), '$property must be a string');
+                        Contract::RequiresValue($property, strlen($property) > 0, '$property cannot be an empty string');
+
+                        Contract::RequiresValue($buildProperties, is_string($buildProperties), '$buildProperties must be a string');
+                        Contract::RequiresValue($buildProperties, strlen($buildProperties) > 0, '$buildProperties cannot be an empty string');
+                });
+
+		return preg_match('|' . $property . '=|', $buildProperties);
         }
-        
+
 	public function setBuildProperty($property, $value)
 	{
+                // catch silly programmer errors
+                Contract::Preconditions(function() use ($property, $value)
+                {
+                        Contract::RequiresValue($property, is_string($property), '$property must be a string');
+                        Contract::RequiresValue($property, strlen($property) > 0, '$property cannot be an empty string');
+
+                        Contract::RequiresValue($value, is_string($value) || is_int($value) || is_float($value), '$value must be a string, integer or float');
+                });
+
 		if (!$this->testHasBuildProperties())
 		{
 			return false;
@@ -360,7 +557,7 @@ class ComponentFolder
 		}
 		file_put_contents($this->buildPropertiesFile, $buildProperties);
 	}
-        
+
         public function testHasPackageXml()
         {
                 if (file_exists($this->packageXmlFile))
@@ -370,22 +567,22 @@ class ComponentFolder
 
                 return false;
         }
-        
+
         public function loadPackageXml()
         {
                 if (!$this->testHasPackageXml())
                 {
                         return false;
                 }
-                
+
                 return simplexml_load_file($this->packageXmlFile);
         }
-        
+
         public function savePackageXml(SimpleXMLElement $xmlNode)
         {
                 file_put_contents($this->packageXmlFile, $xmlNode->asXML());
         }
-        
+
 	public function upgradeComponent($targetVersion, $thisVersion = null)
 	{
                 // work out which version we are upgrading from

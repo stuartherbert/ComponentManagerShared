@@ -49,13 +49,96 @@ namespace Phix_Project\ComponentManager\PhixCommands;
 use Phix_Project\Phix\CommandsList;
 use Phix_Project\Phix\Context;
 use Phix_Project\PhixExtensions\CommandBase;
+use Phix_Project\CommandLineLib\CommandLineParser;
 use Phix_Project\CommandLineLib\DefinedSwitches;
 use Phix_Project\CommandLineLib\DefinedSwitch;
+use Phix_Project\CommandLineLib\ParsedSwitches;
 
 use Phix_Project\ComponentManager\Entities\ComponentFolder;
+use Phix_Project\ValidationLib\MustBePearFileRole;
 
 class ComponentCommandBase extends CommandBase
 {
+        /**
+         * Parse the switches for this command
+         *
+         * @param  array $args       the command line
+         * @param  int   &$argsIndex where to look for the switches
+         * @return array(int, ParsedSwitches)
+         *         First element in the array is the return code to send
+         *         back up the stack if parsing failed, or 0 on success
+         *         Second element in the array is null if parsing failed,
+         *         or the ParsedSwitches object on success
+         */
+        protected function parseSwitches($args, &$argsIndex)
+        {
+                // parse the switch(es)
+                $options = $this->getCommandOptions();
+                $parser  = new CommandLineParser();
+                list($parsedSwitches, $argsIndex) = $parser->parseSwitches($args, $argsIndex, $options);
+
+                // check for errors
+                $errors = $parsedSwitches->validateSwitchValues();
+                if (count($errors) > 0)
+                {
+                        // validation failed
+                        foreach ($errors as $errorMsg)
+                        {
+                                $se->output($context->errorStyle, $context->errorPrefix);
+                                $se->outputLine(null, $errorMsg);
+                        }
+
+                        // return the error code to the caller
+                        return array(1, null);
+                }
+
+                // if we get here, then the switches all parsed fine
+                return array(0, $parsedSwitches);
+        }
+
+        protected function validateRole(&$args, &$argsIndex, Context $context)
+        {
+                $se = $context->stderr;
+
+                // $args[$argsIndex] should point at the role(s) that the user
+                // wants to add to the existing structure
+
+                if (!isset($args[$argsIndex]))
+                {
+                        $se->output($context->errorStyle, $context->errorPrefix);
+                        $se->outputLine(null, 'the role(s) to add are missing from the command line');
+
+                        return array(1, null);
+                }
+
+                // okay, we have a (possibly) comma-separated list of roles
+                $roles  = explode(',', $args[$argsIndex]);
+                $errors = array();
+                foreach ($roles as $role)
+                {
+                        $validator = new MustBePearFileRole();
+                        if (!$validator->isValid($role))
+                        {
+                                array_merge($errors, $validator->getMessages());
+                        }
+                }
+
+                // okay, did that lot validate?
+                if (count($errors) > 0)
+                {
+                        // we have errors
+                        foreach ($errors as $msg)
+                        {
+                                $se->output($context->errorStyle, $context->errorPrefix);
+                                $se->outputLine(null, $msg);
+                        }
+                        return array(1, null);
+                }
+
+                // if we get here, then the roles are valid
+                return $roles;
+        }
+
         protected function validateFolder(&$args, $argsIndex, Context $context)
         {
                 $se = $context->stderr;
