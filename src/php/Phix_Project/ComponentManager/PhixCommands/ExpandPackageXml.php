@@ -156,14 +156,14 @@ class ExpandPackageXml extends CommandBase implements CommandInterface
                 }
                 $buildProperties['${build.date}'] = date('Y-m-d');
                 $buildProperties['${build.time}'] = date('H:i:s');
-                
+
                 if (isset($buildProperties['${project.snapshot}']) && $buildProperties['${project.snapshot}'])
                 {
                         $buildProperties['${project.version}'] = $buildProperties['${project.majorVersion}']
                           . '.' . $buildProperties['${project.minorVersion}']
                           . '.' . $buildProperties['${project.patchLevel}']
                           . 'snapshot' . date('YmdHi');
-                        
+
                         $buildProperties['${project.stability}'] = 'snapshot';
                 }
                 else
@@ -171,7 +171,7 @@ class ExpandPackageXml extends CommandBase implements CommandInterface
                         $buildProperties['${project.version}'] = $buildProperties['${project.majorVersion}']
                           . '.' . $buildProperties['${project.minorVersion}']
                           . '.' . $buildProperties['${project.patchLevel}'];
-                        
+
                         $buildProperties['${project.stability}'] = 'stable';
                 }
 
@@ -243,7 +243,7 @@ class ExpandPackageXml extends CommandBase implements CommandInterface
                                 $filename = \str_replace($searchFolder, '', $direntry->getPathname());
 
                                 // var_dump($filename);
-                                
+
                                 // skip all blacklisted files
                                 if (isset($blacklist[basename($filename)]))
                                 {
@@ -311,7 +311,9 @@ class ExpandPackageXml extends CommandBase implements CommandInterface
                         case 'doc':
                                 // do something here
                                 $return .= '        <tasks:replace from="@' . '@PACKAGE_VERSION@@" to="version" type="package-info" />' . "\n"
+                                        .  '        <tasks:replace from="@' . '@PHP_BIN@@" to="php_bin" type="pear-config" />' . "\n"
                                         .  '        <tasks:replace from="@' . '@PHP_DIR@@" to="php_dir" type="pear-config" />' . "\n"
+                                        .  '        <tasks:replace from="@' . '@BIN_DIR@@" to="bin_dir" type="pear-config" />' . "\n"
                                         .  '        <tasks:replace from="@' . '@DATA_DIR@@" to="data_dir" type="pear-config" />' . "\n";
                                 break;
 
