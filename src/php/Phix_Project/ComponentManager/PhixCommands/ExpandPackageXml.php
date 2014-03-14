@@ -172,7 +172,7 @@ class ExpandPackageXml extends CommandBase implements CommandInterface
                           . '.' . $buildProperties['${project.minorVersion}']
                           . '.' . $buildProperties['${project.patchLevel}'];
 
-                        if (!empty($buildProperties['${project.stability}']))
+                        if (empty($buildProperties['${project.stability}']))
                         {
                             $buildProperties['${project.stability}'] = 'stable';
                         }
